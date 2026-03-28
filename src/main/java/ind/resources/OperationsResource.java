@@ -5,8 +5,13 @@ import java.util.List;
 import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.logging.Logger;
+import java.util.HashMap;
+import java.util.Map;
 
-import ind.resources.obsolete.LoginResource;
+
+import ind.util.*;
+import ind.responses.*;
+
 import org.apache.commons.codec.digest.DigestUtils;
 
 import jakarta.ws.rs.GET;
@@ -23,9 +28,6 @@ import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response.Status;
 
 import jakarta.servlet.http.HttpServletRequest;
-
-import ind.util.obsolete.AuthToken;
-import ind.util.obsolete.LoginData;
 
 import com.google.cloud.Timestamp;
 import com.google.cloud.datastore.Key;
@@ -67,7 +69,7 @@ public class OperationsResource {
     private static final int ERROR_FORBIDDEN = 9907;
 
 
-    private static final Logger LOG = Logger.getLogger(LoginResource.class.getName());
+    private static final Logger LOG = Logger.getLogger(OperationsResource.class.getName());
     private static final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
     private static final KeyFactory userKeyFactory = datastore.newKeyFactory().setKind("User");
     private static final KeyFactory tokenKeyFactory = datastore.newKeyFactory().setKind("Token");
@@ -78,6 +80,47 @@ public class OperationsResource {
 
     //Private op
 
+    private Response successHandler(Object data) {
+        StandardResponse response = new StandardResponse("success", data);
+        return Response.ok().entity(gson.toJson(response)).build();
+    }
+    private Response errorHandler(int nError, String msgError) {
+        StandardResponse response = new StandardResponse(nError, msgError);
+        return Response.ok().entity(gson.toJson(response)).build();
+    }
     //Private op
 
+    //Operation 1: Create Accounts
+    @POST
+    @Path("/createaccount")
+    public Response createAccounts(CreateAccountData data) {
+        LOG.fine("Attempt to register user: " + data.username);
+        if (!data.validRegistration()) {
+            return errorHandler(ERROR_INVALID_INPUT, INVALID_INPUT);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key userKey = userKeyFactory.newKey(data.username);
+            Entity user = txn.get(userKey);
+            if (user != null) {
+                txn.rollback();
+                return errorHandler(ERROR_USER_ALREADY_EXISTS, USER_ALREADY_EXISTS);
+            }
+            user = Entity.newBuilder(userKey)
+                    .set("username", data.username)
+                    .set("password", DigestUtils.sha512Hex(data.password))
+                    .set("phone", data.phone)
+                    .set("address", data.address)
+                    .set("role", data.role.toUpperCase())
+                    .build();
+            txn.put(user);
+            txn.commit();
+            LOG.info("User registered " + data.username);
+            CreateAccountResponse responseData = new CreateAccountResponse(data.username, data.role);
+            return successHandler(responseData);
+        } catch (Exception e) {
+            LOG.severe("Error registering user: " + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error registering user.").build();
+        }
+    }
 }
