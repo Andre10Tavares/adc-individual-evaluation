@@ -70,7 +70,6 @@ public class OperationsResource {
     private static final String LOG_MESSAGE_DELETE_ERROR = "Error delete account: ";
     private static final String LOG_MESSAGE_DELETE_UNKNOWN_TOKEN = "Failed delete attempt for token: ";
     private static final String LOG_MESSAGE_DELETE_UNKNOWN_USER = "Failed delete attempt for username: ";
-    private static final String LOG_MESSAGE_DELETE_SAME = "Failed delete attempt himself: ";
     private static final String LOG_MESSAGE_DELETE_SUCCESSFUL = "Account deleted: ";
     private static final String LOG_MESSAGE_MOD_ATTEMPT =  "Modify one account attempt by user: ";
     private static final String LOG_MESSAGE_MOD_UNKNOWN_TOKEN = "Failed mod attempt for token: ";
@@ -81,6 +80,11 @@ public class OperationsResource {
     private static final String LOG_MESSAGE_SHOW_SESSIONS_ERROR = "Error show sessions: ";
     private static final String LOG_MESSAGE_SHOW_SESSIONS_UNKNOWN_TOKEN = "Failed show sessions attempt for token: ";
     private static final String LOG_MESSAGE_SHOW_SESSIONS_SUCCESSFUL = "Show sessions successful by user: ";
+    private static final String LOG_MESSAGE_SHOW_ROLE_ATTEMPT = "Show role attempt by user: ";
+    private static final String LOG_MESSAGE_SHOW_ROLE_ERROR = "Error show role: ";
+    private static final String LOG_MESSAGE_SHOW_ROLE_UNKNOWN_TOKEN = "Failed show role attempt for token: ";
+    private static final String LOG_MESSAGE_SHOW_ROLE_UNKNOWN_USER = "Failed show role attempt for username: ";
+    private static final String LOG_MESSAGE_SHOW_ROLE_SUCCESSFUL = "Show role successful by user: ";
 
     private static final String MESSAGE_DELETE = "Account deleted successfully";
     private static final String MESSAGE_MOD = "Updated successfully";
@@ -299,11 +303,6 @@ public class OperationsResource {
                 txn.rollback();
                 return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
             }
-            if(user.getKey().getName().equalsIgnoreCase(token.getString("username"))) {
-                LOG.warning(LOG_MESSAGE_DELETE_SAME + data.input.username);
-                txn.rollback();
-                return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
-            }
             Query<Entity> tokenQuery = Query.newEntityQueryBuilder()
                     .setKind("Token")
                     .setFilter(PropertyFilter.eq("username", data.input.username))
@@ -437,7 +436,56 @@ public class OperationsResource {
             return successHandler(response);
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_SHOW_SESSIONS_ERROR + e.getMessage());
-            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error show user.").build();
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error show users.").build();
+        }
+    }
+
+    //Operation 7: Show user role
+    @POST
+    @Path("/showuserrole")
+    public Response showRole(AuthData data) {
+        LOG.fine(LOG_MESSAGE_SHOW_ROLE_ATTEMPT + data.token.username);
+        if(!data.token.validTokenInput()) {
+            return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
+        if(!data.input.validUsername()) {
+            return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key tokenKey = tokenKeyFactory.newKey(data.token.tokenId);
+            Entity token = txn.get(tokenKey);
+            if(!checkToken(txn, token, data.token)) {
+                LOG.warning(LOG_MESSAGE_SHOW_ROLE_UNKNOWN_TOKEN + data.token.tokenId);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+            }
+            if(!checkTokenTime(token)) {
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.username);
+                txn.delete(tokenKey);
+                txn.commit();
+                return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
+            }
+            List<String> expectedRoles = List.of("ADMIN", "BOFFICER");
+            if(!checkRole(token, expectedRoles)) {
+                LOG.warning(LOG_MESSAGE_WRONG_ROLE + data.token.username);
+                txn.rollback();
+                return errorHandler(ERROR_UNAUTHORIZED, UNAUTHORIZED);
+            }
+            Key userKey = userKeyFactory.newKey(data.input.username);
+            Entity user = txn.get(userKey);
+            if (user == null) {
+                LOG.warning(LOG_MESSAGE_SHOW_ROLE_UNKNOWN_USER + data.input.username);
+                txn.rollback();
+                return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
+            }
+            txn.commit();
+            LOG.info(LOG_MESSAGE_SHOW_ROLE_SUCCESSFUL + data.input.username);
+            UserInfo response = new UserInfo(user.getKey().getName(), user.getString("role"));
+            return successHandler(response);
+        } catch (Exception e) {
+            LOG.severe(LOG_MESSAGE_SHOW_ROLE_ERROR + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error show user role.").build();
         }
     }
 }
