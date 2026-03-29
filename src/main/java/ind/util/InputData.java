@@ -54,27 +54,27 @@ public class InputData {
 
     //Only username in Ops 4, 7, 10.
     //All the other validations use this one
-    public boolean validUserame() {
+    public boolean validUsername() {
         return nonEmptyOrBlankField(username) &&
                 username.contains("@");
     }
 
     //Used in Op 5
     public boolean validAttributes() {
-        return validUserame() &&
+        return validUsername() &&
                 attributes.validAttributes();
     }
 
     //Used in Op 8
     public boolean validRole() {
-        return validUserame() &&
+        return validUsername() &&
                 nonEmptyOrBlankField(newRole) &&
                 (newRole.equalsIgnoreCase("USER") || newRole.equalsIgnoreCase("BOFFICER") || newRole.equalsIgnoreCase("ADMIN"));
     }
 
     //Used in Op 9
     public boolean validPasswordInput() {
-        return validUserame() &&
+        return validUsername() &&
                 nonEmptyOrBlankField(newPassword) &&
                 nonEmptyOrBlankField(oldPassword);
     }

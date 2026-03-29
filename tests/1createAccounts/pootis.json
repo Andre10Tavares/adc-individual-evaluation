@@ -1,0 +1,10 @@
+{
+  "input": {
+    "username": "pootis@gmail.com",
+    "password": "pass",
+    "confirmation": "pass",
+    "phone": "111111111",
+    "address": "seixal",
+    "role": "BOFFICER"
+  }
+}

@@ -1,12 +1,8 @@
 package ind.resources;
 
-import java.util.Date;
 import java.util.List;
-import java.util.Calendar;
 import java.util.ArrayList;
 import java.util.logging.Logger;
-import java.util.HashMap;
-import java.util.Map;
 
 
 import ind.util.*;
@@ -14,35 +10,23 @@ import ind.responses.*;
 
 import org.apache.commons.codec.digest.DigestUtils;
 
-import jakarta.ws.rs.GET;
 import jakarta.ws.rs.POST;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.PathParam;
-import jakarta.ws.rs.QueryParam;
-import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response.Status;
 
-import jakarta.servlet.http.HttpServletRequest;
-
-import com.google.cloud.Timestamp;
 import com.google.cloud.datastore.Key;
 import com.google.cloud.datastore.Query;
 import com.google.cloud.datastore.Entity;
 import com.google.cloud.datastore.Datastore;
 import com.google.cloud.datastore.KeyFactory;
-import com.google.cloud.datastore.PathElement;
-import com.google.cloud.datastore.StringValue;
 import com.google.cloud.datastore.Transaction;
 import com.google.cloud.datastore.QueryResults;
 import com.google.cloud.datastore.DatastoreOptions;
-import com.google.cloud.datastore.StructuredQuery.OrderBy;
 import com.google.cloud.datastore.StructuredQuery.PropertyFilter;
-import com.google.cloud.datastore.StructuredQuery.CompositeFilter;
 
 import com.google.gson.Gson;
 
@@ -68,28 +52,34 @@ public class OperationsResource {
     private static final int ERROR_INVALID_INPUT = 9906;
     private static final int ERROR_FORBIDDEN = 9907;
 
-    private static final String LOG_MESSAGE_REGISTER_ATTEMP =  "Attempt to register user: ";
+    private static final String LOG_MESSAGE_REGISTER_ATTEMPT =  "Attempt to register user: ";
     private static final String LOG_MESSAGE_REGISTER_SUCCESSFUL = "User registered: ";
     private static final String LOG_MESSAGE_REGISTER_ERROR = "Error registering user: ";
-    private static final String LOG_MESSAGE_LOGIN_ATTEMP = "Login attempt by user: ";
+    private static final String LOG_MESSAGE_LOGIN_ATTEMPT = "Login attempt by user: ";
     private static final String LOG_MESSAGE_LOGIN_UNKNOWN_USER = "Failed login attempt for username: ";
     private static final String LOG_MESSAGE_LOGIN_ERROR = "Error login user: ";
     private static final String LOG_MESSAGE_WRONG_PASSWORD = "Wrong password for: ";
     private static final String LOG_MESSAGE_LOGIN_SUCCESSFUL = "Login successful by user: ";
-    private static final String LOG_MESSAGE_SHOWUSERS_ATTEMP = "Show users attempt by user: ";
+    private static final String LOG_MESSAGE_SHOWUSERS_ATTEMPT = "Show users attempt by user: ";
     private static final String LOG_MESSAGE_SHOWUSERS_ERROR = "Error show users: ";
     private static final String LOG_MESSAGE_SHOWUSERS_UNKNOWN_TOKEN = "Failed show users attempt for token: ";
-    private static final String LOG_MESSAGE_EXPIRED_TOKEN = "Expired token: ";
+    private static final String LOG_MESSAGE_EXPIRED_TOKEN = "Expired token from: ";
     private static final String LOG_MESSAGE_WRONG_ROLE = "User does not have the necessary role: ";
     private static final String LOG_MESSAGE_SHOWUSERS_SUCCESSFUL = "Show users successful by user: ";
-    private static final String LOG_MESSAGE_DELETE_ATTEMP = "Delete attempt by user: ";
+    private static final String LOG_MESSAGE_DELETE_ATTEMPT = "Delete attempt by user: ";
     private static final String LOG_MESSAGE_DELETE_ERROR = "Error delete account: ";
     private static final String LOG_MESSAGE_DELETE_UNKNOWN_TOKEN = "Failed delete attempt for token: ";
     private static final String LOG_MESSAGE_DELETE_UNKNOWN_USER = "Failed delete attempt for username: ";
     private static final String LOG_MESSAGE_DELETE_SAME = "Failed delete attempt himself: ";
     private static final String LOG_MESSAGE_DELETE_SUCCESSFUL = "Account deleted: ";
+    private static final String LOG_MESSAGE_MOD_ATTEMPT =  "Modify one account attempt by user: ";
+    private static final String LOG_MESSAGE_MOD_UNKNOWN_TOKEN = "Failed mod attempt for token: ";
+    private static final String LOG_MESSAGE_MOD_UNKNOWN_USER = "Failed mod attempt for username: ";
+    private static final String LOG_MESSAGE_MOD_SUCCESSFUL = "Account modified: ";
+    private static final String LOG_MESSAGE_MOD_ERROR = "Error mod account: ";
 
     private static final String MESSAGE_DELETE = "Account deleted successfully";
+    private static final String MESSAGE_MOD = "Updated successfully";
 
     private static final Logger LOG = Logger.getLogger(OperationsResource.class.getName());
     private static final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
@@ -142,7 +132,7 @@ public class OperationsResource {
     @POST
     @Path("/createaccount")
     public Response createAccounts(AuthData data) {
-        LOG.fine(LOG_MESSAGE_REGISTER_ATTEMP + data.input.username);
+        LOG.fine(LOG_MESSAGE_REGISTER_ATTEMPT + data.input.username);
         CreateAccountData newAccount = new CreateAccountData(data.input.username, data.input.password, data.input.confirmation, data.input.phone, data.input.address, data.input.role) ;
         if (!newAccount.validRegistration()) {
             return errorHandler(ERROR_INVALID_INPUT, INVALID_INPUT);
@@ -177,7 +167,7 @@ public class OperationsResource {
     @POST
     @Path("/login")
     public Response login(AuthData data) {
-        LOG.fine(LOG_MESSAGE_LOGIN_ATTEMP + data.input.username);
+        LOG.fine(LOG_MESSAGE_LOGIN_ATTEMPT + data.input.username);
         LoginData login = new LoginData(data.input.username, data.input.password);
         if (!login.notNullUsername()) {
             return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
@@ -222,7 +212,7 @@ public class OperationsResource {
     @POST
     @Path("/showusers")
     public Response showUsers(AuthData data) {
-        LOG.fine(LOG_MESSAGE_SHOWUSERS_ATTEMP + data.token.username);
+        LOG.fine(LOG_MESSAGE_SHOWUSERS_ATTEMPT + data.token.username);
         if(!data.token.validTokenInput()) {
             return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
         }
@@ -236,7 +226,7 @@ public class OperationsResource {
                 return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
             }
             if(!checkTokenTime(token)) {
-                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.tokenId);
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.username);
                 txn.delete(tokenKey);
                 txn.commit();
                 return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
@@ -270,9 +260,12 @@ public class OperationsResource {
     @POST
     @Path("/deleteaccount")
     public Response deleteAccount(AuthData data) {
-        LOG.fine(LOG_MESSAGE_DELETE_ATTEMP + data.token.username);
+        LOG.fine(LOG_MESSAGE_DELETE_ATTEMPT + data.token.username);
         if(!data.token.validTokenInput()) {
             return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
+        if(!data.input.validUsername()) {
+            return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
         }
         try {
             Transaction txn = datastore.newTransaction();
@@ -284,7 +277,7 @@ public class OperationsResource {
                 return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
             }
             if(!checkTokenTime(token)) {
-                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.tokenId);
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.username);
                 txn.delete(tokenKey);
                 txn.commit();
                 return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
@@ -322,6 +315,67 @@ public class OperationsResource {
             return successHandler(response);
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_DELETE_ERROR + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error delete account.").build();
+        }
+    }
+
+    //Operation 5: Modify account attributes
+    @POST
+    @Path("/modaccount")
+    public Response modAccount(AuthData data) {
+        LOG.fine(LOG_MESSAGE_MOD_ATTEMPT + data.token.username);
+        if(!data.token.validTokenInput()) {
+            return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
+        if(!data.input.validAttributes()) {
+            return errorHandler(ERROR_INVALID_INPUT, INVALID_INPUT);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key tokenKey = tokenKeyFactory.newKey(data.token.tokenId);
+            Entity token = txn.get(tokenKey);
+            if(!checkToken(txn, token, data.token)) {
+                LOG.warning(LOG_MESSAGE_MOD_UNKNOWN_TOKEN + data.token.tokenId);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+            }
+            if(!checkTokenTime(token)) {
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.username);
+                txn.delete(tokenKey);
+                txn.commit();
+                return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
+            }
+            Key userKey = userKeyFactory.newKey(data.input.username);
+            Entity user = txn.get(userKey);
+            if (user == null) {
+                LOG.warning(LOG_MESSAGE_MOD_UNKNOWN_USER + data.input.username);
+                txn.rollback();
+                return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
+            }
+            if (token.getString("role").equalsIgnoreCase("USER")) {
+                if(!user.getKey().getName().equals(token.getString("username"))) {
+                    LOG.warning(LOG_MESSAGE_WRONG_ROLE + data.token.username);
+                    txn.rollback();
+                    return errorHandler(ERROR_UNAUTHORIZED, UNAUTHORIZED);
+                }
+            } else if (token.getString("role").equalsIgnoreCase("BOFFICER")) {
+                if(!user.getKey().getName().equals(token.getString("username"))
+                        && !user.getString("role").equalsIgnoreCase("USER")) {
+                    LOG.warning(LOG_MESSAGE_WRONG_ROLE + data.token.username);
+                    txn.rollback();
+                    return errorHandler(ERROR_UNAUTHORIZED, UNAUTHORIZED);
+                }
+            }
+            Entity.Builder builder = Entity.newBuilder(user);
+            builder.set("phone", data.input.attributes.phone);
+            builder.set("address", data.input.attributes.address);
+            txn.put(builder.build());
+            txn.commit();
+            LOG.info(LOG_MESSAGE_MOD_SUCCESSFUL + data.input.username);
+            MessageResponse response = new MessageResponse(MESSAGE_MOD);
+            return successHandler(response);
+        } catch (Exception e) {
+            LOG.severe(LOG_MESSAGE_MOD_ERROR + e.getMessage());
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error delete account.").build();
         }
     }
