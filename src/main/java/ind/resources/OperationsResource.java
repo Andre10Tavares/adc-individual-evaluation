@@ -72,10 +72,16 @@ public class OperationsResource {
     private static final String LOG_MESSAGE_REGISTER_SUCCESSFUL = "User registered: ";
     private static final String LOG_MESSAGE_REGISTER_ERROR = "Error registering user: ";
     private static final String LOG_MESSAGE_LOGIN_ATTEMP = "Login attempt by user: ";
-    private static final String LOG_MESSAGE_LOGIN_UNKNOW_USER = "Failed login attempt for username: ";
+    private static final String LOG_MESSAGE_LOGIN_UNKNOWN_USER = "Failed login attempt for username: ";
     private static final String LOG_MESSAGE_LOGIN_ERROR = "Error login user: ";
     private static final String LOG_MESSAGE_WRONG_PASSWORD = "Wrong password for: ";
     private static final String LOG_MESSAGE_LOGIN_SUCCESSFUL = "Login successful by user: ";
+    private static final String LOG_MESSAGE_SHOWUSERS_ATTEMP = "Show users attempt by user: ";
+    private static final String LOG_MESSAGE_SHOWUSERS_ERROR = "Error show users: ";
+    private static final String LOG_MESSAGE_SHOWUSERS_UNKNOWN_TOKEN = "Failed show users attempt for token: ";
+    private static final String LOG_MESSAGE_EXPIRED_TOKEN = "Expired token: ";
+    private static final String LOG_MESSAGE_WRONG_ROLE = "User does not have the necessary role: ";
+    private static final String LOG_MESSAGE_SHOWUSERS_SUCCESSFUL = "Show users successful by user: ";
 
 
     private static final Logger LOG = Logger.getLogger(OperationsResource.class.getName());
@@ -95,6 +101,33 @@ public class OperationsResource {
     private Response errorHandler(int nError, String msgError) {
         StandardResponse response = new StandardResponse(nError, msgError);
         return Response.ok().entity(gson.toJson(response)).build();
+    }
+
+    private boolean checkToken(Transaction txn, Entity token, AuthToken sentToken) {
+        boolean check = true;
+        if (token == null) {
+            check = false;
+        } else {
+            Key userKey = userKeyFactory.newKey(token.getString("username"));
+            Entity user = txn.get(userKey);
+            if (user == null ||
+                    !user.getKey().getName().equals(sentToken.username) ||
+                    !user.getString("role").equalsIgnoreCase(sentToken.role) ||
+                    token.getLong("issuedAt") != sentToken.issuedAt ||
+                    token.getLong("expiresAt") != sentToken.expiresAt) {
+                check = false;
+            }
+        }
+        return check;
+    }
+
+    private boolean checkTokenTime(Entity token) {
+        long time = System.currentTimeMillis() / 1000;
+        return token.getLong("expiresAt") > time;
+    }
+
+    private boolean checkRole(Entity token, List<String> expectedRoles) {
+        return expectedRoles.contains(token.getString("role"));
     }
     //Private op
 
@@ -148,7 +181,7 @@ public class OperationsResource {
             Key userKey = userKeyFactory.newKey(data.username);
             Entity user = txn.get(userKey);
             if(user == null) {
-                LOG.warning(LOG_MESSAGE_LOGIN_UNKNOW_USER + data.username);
+                LOG.warning(LOG_MESSAGE_LOGIN_UNKNOWN_USER + data.username);
                 txn.rollback();
                 return errorHandler(ERROR_INVALID_CREDENTIALS, INVALID_CREDENTIALS);
             }
@@ -157,22 +190,69 @@ public class OperationsResource {
                 txn.rollback();
                 return errorHandler(ERROR_INVALID_CREDENTIALS, INVALID_CREDENTIALS);
             }
-            TokenData tokenData = new TokenData(data.username, user.getString("role"));
-            Key tokenKey = tokenKeyFactory.newKey(tokenData.tokenId);
+            AuthToken authToken = new AuthToken(data.username, user.getString("role"));
+            Key tokenKey = tokenKeyFactory.newKey(authToken.tokenId);
             Entity token = Entity.newBuilder(tokenKey)
-                    .set("username", tokenData.username)
-                    .set("role", tokenData.role)
-                    .set("issuedAt", tokenData.issuedAt)
-                    .set("expiresAt", tokenData.expiresAt)
+                    .set("username", authToken.username)
+                    .set("role", authToken.role)
+                    .set("issuedAt", authToken.issuedAt)
+                    .set("expiresAt", authToken.expiresAt)
                     .build();
             txn.put(token);
             txn.commit();
             LOG.info(LOG_MESSAGE_LOGIN_SUCCESSFUL + data.username);
-            LoginResponse responseLogin = new LoginResponse(tokenData);
+            LoginResponse responseLogin = new LoginResponse(authToken);
             return successHandler(responseLogin);
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_LOGIN_ERROR + e.getMessage());
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error login user.").build();
+        }
+    }
+
+    //Operation 3: Show users
+    @POST
+    @Path("/showusers")
+    public Response showUsers(AuthData data) {
+        LOG.fine(LOG_MESSAGE_SHOWUSERS_ATTEMP + data.token.username);
+        if(!data.token.validTokenInput()) {
+            return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key tokenKey = tokenKeyFactory.newKey(data.token.tokenId);
+            Entity token = txn.get(tokenKey);
+            if(!checkToken(txn, token, data.token)) {
+                LOG.warning(LOG_MESSAGE_SHOWUSERS_UNKNOWN_TOKEN + data.token.tokenId);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+            }
+            if(!checkTokenTime(token)) {
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.tokenId);
+                txn.delete(tokenKey);
+                txn.commit();
+                return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
+            }
+            List<String> expectedRoles = List.of("ADMIN", "BOFFICER");
+            if(!checkRole(token, expectedRoles)) {
+                LOG.warning(LOG_MESSAGE_WRONG_ROLE + data.token.username);
+                txn.rollback();
+                return errorHandler(ERROR_UNAUTHORIZED, UNAUTHORIZED);
+            }
+            Query<Entity> query = Query.newEntityQueryBuilder()
+                    .setKind("User")
+                    .build();
+            QueryResults<Entity> results = txn.run(query);
+            List<UserInfo> users = new ArrayList<>();
+            while (results.hasNext()) {
+                Entity user = results.next();
+                users.add(new UserInfo(user.getKey().getName(), user.getString("role")));
+            }
+            txn.commit();
+            LOG.info(LOG_MESSAGE_SHOWUSERS_SUCCESSFUL + data.token.username);
+            return successHandler(users);
+        } catch (Exception e) {
+            LOG.severe(LOG_MESSAGE_SHOWUSERS_ERROR + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error show user.").build();
         }
     }
 }
