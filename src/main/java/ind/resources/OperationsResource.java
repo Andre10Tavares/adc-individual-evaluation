@@ -68,6 +68,15 @@ public class OperationsResource {
     private static final int ERROR_INVALID_INPUT = 9906;
     private static final int ERROR_FORBIDDEN = 9907;
 
+    private static final String LOG_MESSAGE_REGISTER_ATTEMP =  "Attempt to register user: ";
+    private static final String LOG_MESSAGE_REGISTER_SUCCESSFUL = "User registered: ";
+    private static final String LOG_MESSAGE_REGISTER_ERROR = "Error registering user: ";
+    private static final String LOG_MESSAGE_LOGIN_ATTEMP = "Login attempt by user: ";
+    private static final String LOG_MESSAGE_LOGIN_UNKNOW_USER = "Failed login attempt for username: ";
+    private static final String LOG_MESSAGE_LOGIN_ERROR = "Error login user: ";
+    private static final String LOG_MESSAGE_WRONG_PASSWORD = "Wrong password for: ";
+    private static final String LOG_MESSAGE_LOGIN_SUCCESSFUL = "Login successful by user: ";
+
 
     private static final Logger LOG = Logger.getLogger(OperationsResource.class.getName());
     private static final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
@@ -79,7 +88,6 @@ public class OperationsResource {
     public OperationsResource() {}
 
     //Private op
-
     private Response successHandler(Object data) {
         StandardResponse response = new StandardResponse("success", data);
         return Response.ok().entity(gson.toJson(response)).build();
@@ -94,7 +102,7 @@ public class OperationsResource {
     @POST
     @Path("/createaccount")
     public Response createAccounts(CreateAccountData data) {
-        LOG.fine("Attempt to register user: " + data.username);
+        LOG.fine(LOG_MESSAGE_REGISTER_ATTEMP + data.username);
         if (!data.validRegistration()) {
             return errorHandler(ERROR_INVALID_INPUT, INVALID_INPUT);
         }
@@ -115,12 +123,56 @@ public class OperationsResource {
                     .build();
             txn.put(user);
             txn.commit();
-            LOG.info("User registered " + data.username);
-            CreateAccountResponse responseData = new CreateAccountResponse(data.username, data.role);
-            return successHandler(responseData);
+            LOG.info(LOG_MESSAGE_REGISTER_SUCCESSFUL + data.username);
+            CreateAccountResponse responseRegister = new CreateAccountResponse(data.username, data.role);
+            return successHandler(responseRegister);
         } catch (Exception e) {
-            LOG.severe("Error registering user: " + e.getMessage());
+            LOG.severe(LOG_MESSAGE_REGISTER_ERROR + e.getMessage());
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error registering user.").build();
+        }
+    }
+
+    //Operation 2: Login
+    @POST
+    @Path("/login")
+    public Response login(LoginData data) {
+        LOG.fine(LOG_MESSAGE_LOGIN_ATTEMP + data.username);
+        if (!data.notNullUsername()) {
+            return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
+        }
+        if(!data.validLogin()) {
+            return errorHandler(ERROR_INVALID_CREDENTIALS, INVALID_CREDENTIALS);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key userKey = userKeyFactory.newKey(data.username);
+            Entity user = txn.get(userKey);
+            if(user == null) {
+                LOG.warning(LOG_MESSAGE_LOGIN_UNKNOW_USER + data.username);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_CREDENTIALS, INVALID_CREDENTIALS);
+            }
+            if(!user.getString("password").equals(DigestUtils.sha512Hex(data.password))) {
+                LOG.warning(LOG_MESSAGE_WRONG_PASSWORD + data.username);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_CREDENTIALS, INVALID_CREDENTIALS);
+            }
+            TokenData tokenData = new TokenData(data.username, user.getString("role"));
+            Key tokenKey = tokenKeyFactory.newKey(tokenData.tokenId);
+            Entity token = Entity.newBuilder(tokenKey)
+                    .set("username", tokenData.username)
+                    .set("role", tokenData.role)
+                    .set("issuedAt", tokenData.issuedAt)
+                    .set("expiresAt", tokenData.expiresAt)
+                    .build();
+            txn.put(token);
+            txn.commit();
+            LOG.info(LOG_MESSAGE_LOGIN_SUCCESSFUL + data.username);
+            LoginResponse responseLogin = new LoginResponse(tokenData);
+            return successHandler(responseLogin);
+        } catch (Exception e) {
+            LOG.severe(LOG_MESSAGE_LOGIN_ERROR + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error login user.").build();
         }
     }
 }
