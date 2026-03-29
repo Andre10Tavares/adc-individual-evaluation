@@ -1,0 +1,10 @@
+{
+  "input": {
+    "username": "andre",
+    "password": "pass123",
+    "confirmation": "pass123",
+    "phone": "111111111",
+    "address": "seixal",
+    "role": "ADMIN"
+  }
+}

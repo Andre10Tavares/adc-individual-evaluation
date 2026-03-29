@@ -134,30 +134,31 @@ public class OperationsResource {
     //Operation 1: Create Accounts
     @POST
     @Path("/createaccount")
-    public Response createAccounts(CreateAccountData data) {
-        LOG.fine(LOG_MESSAGE_REGISTER_ATTEMP + data.username);
-        if (!data.validRegistration()) {
+    public Response createAccounts(AuthData data) {
+        LOG.fine(LOG_MESSAGE_REGISTER_ATTEMP + data.input.username);
+        CreateAccountData newAccount = new CreateAccountData(data.input.username, data.input.password, data.input.confirmation, data.input.phone, data.input.address, data.input.role) ;
+        if (!newAccount.validRegistration()) {
             return errorHandler(ERROR_INVALID_INPUT, INVALID_INPUT);
         }
         try {
             Transaction txn = datastore.newTransaction();
-            Key userKey = userKeyFactory.newKey(data.username);
+            Key userKey = userKeyFactory.newKey(newAccount.username);
             Entity user = txn.get(userKey);
             if (user != null) {
                 txn.rollback();
                 return errorHandler(ERROR_USER_ALREADY_EXISTS, USER_ALREADY_EXISTS);
             }
             user = Entity.newBuilder(userKey)
-                    .set("username", data.username)
-                    .set("password", DigestUtils.sha512Hex(data.password))
-                    .set("phone", data.phone)
-                    .set("address", data.address)
-                    .set("role", data.role.toUpperCase())
+                    .set("username", newAccount.username)
+                    .set("password", DigestUtils.sha512Hex(newAccount.password))
+                    .set("phone", newAccount.phone)
+                    .set("address", newAccount.address)
+                    .set("role", newAccount.role.toUpperCase())
                     .build();
             txn.put(user);
             txn.commit();
-            LOG.info(LOG_MESSAGE_REGISTER_SUCCESSFUL + data.username);
-            CreateAccountResponse responseRegister = new CreateAccountResponse(data.username, data.role);
+            LOG.info(LOG_MESSAGE_REGISTER_SUCCESSFUL + newAccount.username);
+            CreateAccountResponse responseRegister = new CreateAccountResponse(newAccount.username, newAccount.role);
             return successHandler(responseRegister);
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_REGISTER_ERROR + e.getMessage());
@@ -168,29 +169,30 @@ public class OperationsResource {
     //Operation 2: Login
     @POST
     @Path("/login")
-    public Response login(LoginData data) {
-        LOG.fine(LOG_MESSAGE_LOGIN_ATTEMP + data.username);
-        if (!data.notNullUsername()) {
+    public Response login(AuthData data) {
+        LOG.fine(LOG_MESSAGE_LOGIN_ATTEMP + data.input.username);
+        LoginData login = new LoginData(data.input.username, data.input.password);
+        if (!login.notNullUsername()) {
             return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
         }
-        if(!data.validLogin()) {
+        if(!login.validLogin()) {
             return errorHandler(ERROR_INVALID_CREDENTIALS, INVALID_CREDENTIALS);
         }
         try {
             Transaction txn = datastore.newTransaction();
-            Key userKey = userKeyFactory.newKey(data.username);
+            Key userKey = userKeyFactory.newKey(login.username);
             Entity user = txn.get(userKey);
             if(user == null) {
-                LOG.warning(LOG_MESSAGE_LOGIN_UNKNOWN_USER + data.username);
+                LOG.warning(LOG_MESSAGE_LOGIN_UNKNOWN_USER + login.username);
                 txn.rollback();
                 return errorHandler(ERROR_INVALID_CREDENTIALS, INVALID_CREDENTIALS);
             }
-            if(!user.getString("password").equals(DigestUtils.sha512Hex(data.password))) {
-                LOG.warning(LOG_MESSAGE_WRONG_PASSWORD + data.username);
+            if(!user.getString("password").equals(DigestUtils.sha512Hex(login.password))) {
+                LOG.warning(LOG_MESSAGE_WRONG_PASSWORD + login.username);
                 txn.rollback();
                 return errorHandler(ERROR_INVALID_CREDENTIALS, INVALID_CREDENTIALS);
             }
-            AuthToken authToken = new AuthToken(data.username, user.getString("role"));
+            AuthToken authToken = new AuthToken(login.username, user.getString("role"));
             Key tokenKey = tokenKeyFactory.newKey(authToken.tokenId);
             Entity token = Entity.newBuilder(tokenKey)
                     .set("username", authToken.username)
@@ -200,7 +202,7 @@ public class OperationsResource {
                     .build();
             txn.put(token);
             txn.commit();
-            LOG.info(LOG_MESSAGE_LOGIN_SUCCESSFUL + data.username);
+            LOG.info(LOG_MESSAGE_LOGIN_SUCCESSFUL + login.username);
             LoginResponse responseLogin = new LoginResponse(authToken);
             return successHandler(responseLogin);
         } catch (Exception e) {
@@ -247,9 +249,10 @@ public class OperationsResource {
                 Entity user = results.next();
                 users.add(new UserInfo(user.getKey().getName(), user.getString("role")));
             }
+            UsersResponse response = new UsersResponse(users);
             txn.commit();
             LOG.info(LOG_MESSAGE_SHOWUSERS_SUCCESSFUL + data.token.username);
-            return successHandler(users);
+            return successHandler(response);
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_SHOWUSERS_ERROR + e.getMessage());
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error show user.").build();

@@ -10,4 +10,11 @@ public class AuthData {
         this.input = input;
         this.token = token;
     }
+    public AuthData(InputData input) {
+        this.input = input;
+    }
+
+    public AuthData(AuthToken token) {
+        this.token = token;
+    }
 }
