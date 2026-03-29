@@ -77,6 +77,10 @@ public class OperationsResource {
     private static final String LOG_MESSAGE_MOD_UNKNOWN_USER = "Failed mod attempt for username: ";
     private static final String LOG_MESSAGE_MOD_SUCCESSFUL = "Account modified: ";
     private static final String LOG_MESSAGE_MOD_ERROR = "Error mod account: ";
+    private static final String LOG_MESSAGE_SHOW_SESSIONS_ATTEMPT = "Show sessions attempt by user: ";
+    private static final String LOG_MESSAGE_SHOW_SESSIONS_ERROR = "Error show sessions: ";
+    private static final String LOG_MESSAGE_SHOW_SESSIONS_UNKNOWN_TOKEN = "Failed show sessions attempt for token: ";
+    private static final String LOG_MESSAGE_SHOW_SESSIONS_SUCCESSFUL = "Show sessions successful by user: ";
 
     private static final String MESSAGE_DELETE = "Account deleted successfully";
     private static final String MESSAGE_MOD = "Updated successfully";
@@ -377,6 +381,63 @@ public class OperationsResource {
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_MOD_ERROR + e.getMessage());
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error delete account.").build();
+        }
+    }
+
+    //Operation 6: Show Authenticated Sessions
+    @POST
+    @Path("/showauthsessions")
+    public Response showSessions(AuthData data) {
+        LOG.fine(LOG_MESSAGE_SHOW_SESSIONS_ATTEMPT + data.token.username);
+        if(!data.token.validTokenInput()) {
+            return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key tokenKey = tokenKeyFactory.newKey(data.token.tokenId);
+            Entity token = txn.get(tokenKey);
+            if(!checkToken(txn, token, data.token)) {
+                LOG.warning(LOG_MESSAGE_SHOW_SESSIONS_UNKNOWN_TOKEN + data.token.tokenId);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+            }
+            if(!checkTokenTime(token)) {
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.username);
+                txn.delete(tokenKey);
+                txn.commit();
+                return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
+            }
+            List<String> expectedRoles = List.of("ADMIN");
+            if(!checkRole(token, expectedRoles)) {
+                LOG.warning(LOG_MESSAGE_WRONG_ROLE + data.token.username);
+                txn.rollback();
+                return errorHandler(ERROR_UNAUTHORIZED, UNAUTHORIZED);
+            }
+            long time = System.currentTimeMillis() / 1000;
+            Query<Entity> query = Query.newEntityQueryBuilder()
+                    .setKind("Token")
+                    .build();
+            QueryResults<Entity> results = txn.run(query);
+            List<SessionInfo> sessions = new ArrayList<>();
+            while (results.hasNext()) {
+                Entity tkn = results.next();
+                if (tkn.getLong("expiresAt") > time) {
+                    sessions.add(new SessionInfo(
+                            tkn.getKey().getName(),
+                            tkn.getString("username"),
+                            tkn.getString("role"),
+                            tkn.getLong("expiresAt")));
+                } else {
+                    txn.delete(tkn.getKey());
+                }
+            }
+            SessionsResponse response = new SessionsResponse(sessions);
+            txn.commit();
+            LOG.info(LOG_MESSAGE_SHOW_SESSIONS_SUCCESSFUL + data.token.username);
+            return successHandler(response);
+        } catch (Exception e) {
+            LOG.severe(LOG_MESSAGE_SHOW_SESSIONS_ERROR + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error show user.").build();
         }
     }
 }
