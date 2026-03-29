@@ -7,6 +7,8 @@ public class UsersResponse {
 
     public List<UserInfo> users;
 
+    public UsersResponse(){}
+
     public UsersResponse(List<UserInfo> users) {
         this.users = users;
     }

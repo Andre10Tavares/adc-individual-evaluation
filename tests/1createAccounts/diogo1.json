@@ -1,10 +1,10 @@
 {
   "input": {
     "username": "diogo@gmail.com",
-    "password": "123pass",
-    "confirmation": "123pass",
+    "password": "banana",
+    "confirmation": "banana",
     "phone": "222222222",
     "address": "seixal",
-    "role": "USER"
+    "role": "ADMIN"
   }
 }

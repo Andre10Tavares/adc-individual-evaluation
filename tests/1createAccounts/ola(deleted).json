@@ -1,0 +1,10 @@
+{
+  "input": {
+    "username": "ola@gmail.com",
+    "password": "pass123",
+    "confirmation": "pass123",
+    "phone": "111111111",
+    "address": "aa",
+    "role": "BOFFICER"
+  }
+}

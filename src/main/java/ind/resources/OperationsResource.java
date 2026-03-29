@@ -82,7 +82,14 @@ public class OperationsResource {
     private static final String LOG_MESSAGE_EXPIRED_TOKEN = "Expired token: ";
     private static final String LOG_MESSAGE_WRONG_ROLE = "User does not have the necessary role: ";
     private static final String LOG_MESSAGE_SHOWUSERS_SUCCESSFUL = "Show users successful by user: ";
+    private static final String LOG_MESSAGE_DELETE_ATTEMP = "Delete attempt by user: ";
+    private static final String LOG_MESSAGE_DELETE_ERROR = "Error delete account: ";
+    private static final String LOG_MESSAGE_DELETE_UNKNOWN_TOKEN = "Failed delete attempt for token: ";
+    private static final String LOG_MESSAGE_DELETE_UNKNOWN_USER = "Failed delete attempt for username: ";
+    private static final String LOG_MESSAGE_DELETE_SAME = "Failed delete attempt himself: ";
+    private static final String LOG_MESSAGE_DELETE_SUCCESSFUL = "Account deleted: ";
 
+    private static final String MESSAGE_DELETE = "Account deleted successfully";
 
     private static final Logger LOG = Logger.getLogger(OperationsResource.class.getName());
     private static final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
@@ -112,7 +119,7 @@ public class OperationsResource {
             Entity user = txn.get(userKey);
             if (user == null ||
                     !user.getKey().getName().equals(sentToken.username) ||
-                    !user.getString("role").equalsIgnoreCase(sentToken.role) ||
+                    !token.getString("role").equalsIgnoreCase(sentToken.role) ||
                     token.getLong("issuedAt") != sentToken.issuedAt ||
                     token.getLong("expiresAt") != sentToken.expiresAt) {
                 check = false;
@@ -256,6 +263,66 @@ public class OperationsResource {
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_SHOWUSERS_ERROR + e.getMessage());
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error show user.").build();
+        }
+    }
+
+    //Operation 4: Delete account
+    @POST
+    @Path("/deleteaccount")
+    public Response deleteAccount(AuthData data) {
+        LOG.fine(LOG_MESSAGE_DELETE_ATTEMP + data.token.username);
+        if(!data.token.validTokenInput()) {
+            return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key tokenKey = tokenKeyFactory.newKey(data.token.tokenId);
+            Entity token = txn.get(tokenKey);
+            if(!checkToken(txn, token, data.token)) {
+                LOG.warning(LOG_MESSAGE_DELETE_UNKNOWN_TOKEN + data.token.tokenId);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+            }
+            if(!checkTokenTime(token)) {
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.tokenId);
+                txn.delete(tokenKey);
+                txn.commit();
+                return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
+            }
+            List<String> expectedRoles = List.of("ADMIN");
+            if(!checkRole(token, expectedRoles)) {
+                LOG.warning(LOG_MESSAGE_WRONG_ROLE + data.token.username);
+                txn.rollback();
+                return errorHandler(ERROR_UNAUTHORIZED, UNAUTHORIZED);
+            }
+            Key userKey = userKeyFactory.newKey(data.input.username);
+            Entity user = txn.get(userKey);
+            if (user == null) {
+                LOG.warning(LOG_MESSAGE_DELETE_UNKNOWN_USER + data.input.username);
+                txn.rollback();
+                return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
+            }
+            if(user.getKey().getName().equalsIgnoreCase(token.getString("username"))) {
+                LOG.warning(LOG_MESSAGE_DELETE_SAME + data.input.username);
+                txn.rollback();
+                return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+            }
+            Query<Entity> tokenQuery = Query.newEntityQueryBuilder()
+                    .setKind("Token")
+                    .setFilter(PropertyFilter.eq("username", data.input.username))
+                    .build();
+            QueryResults<Entity> tokens = txn.run(tokenQuery);
+            while (tokens.hasNext()) {
+                txn.delete(tokens.next().getKey());
+            }
+            txn.delete(userKey);
+            txn.commit();
+            LOG.info(LOG_MESSAGE_DELETE_SUCCESSFUL + data.input.username);
+            MessageResponse response = new MessageResponse(MESSAGE_DELETE);
+            return successHandler(response);
+        } catch (Exception e) {
+            LOG.severe(LOG_MESSAGE_DELETE_ERROR + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error delete account.").build();
         }
     }
 }
