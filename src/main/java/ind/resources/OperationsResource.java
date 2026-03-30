@@ -85,9 +85,15 @@ public class OperationsResource {
     private static final String LOG_MESSAGE_SHOW_ROLE_UNKNOWN_TOKEN = "Failed show role attempt for token: ";
     private static final String LOG_MESSAGE_SHOW_ROLE_UNKNOWN_USER = "Failed show role attempt for username: ";
     private static final String LOG_MESSAGE_SHOW_ROLE_SUCCESSFUL = "Show role successful by user: ";
+    private static final String LOG_MESSAGE_CHANGE_ROLE_ATTEMPT =  "Change role on one account attempt by user: ";
+    private static final String LOG_MESSAGE_CHANGE_ROLE_UNKNOWN_TOKEN = "Failed change role attempt for token: ";
+    private static final String LOG_MESSAGE_CHANGE_ROLE_UNKNOWN_USER = "Failed change role attempt for username: ";
+    private static final String LOG_MESSAGE_CHANGE_ROLE_SUCCESSFUL = "Account with the role changed: ";
+    private static final String LOG_MESSAGE_CHANGE_ROLE_ERROR = "Error change role: ";
 
     private static final String MESSAGE_DELETE = "Account deleted successfully";
     private static final String MESSAGE_MOD = "Updated successfully";
+    private static final String MESSAGE_CHANGE_ROLE = "Role updated successfully";
 
     private static final Logger LOG = Logger.getLogger(OperationsResource.class.getName());
     private static final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
@@ -140,6 +146,9 @@ public class OperationsResource {
     @POST
     @Path("/createaccount")
     public Response createAccounts(AuthData data) {
+        if (!data.inputNotNull()) {
+            return errorHandler(ERROR_INVALID_INPUT, INVALID_INPUT);
+        }
         LOG.fine(LOG_MESSAGE_REGISTER_ATTEMPT + data.input.username);
         CreateAccountData newAccount = new CreateAccountData(data.input.username, data.input.password, data.input.confirmation, data.input.phone, data.input.address, data.input.role) ;
         if (!newAccount.validRegistration()) {
@@ -154,7 +163,7 @@ public class OperationsResource {
                 return errorHandler(ERROR_USER_ALREADY_EXISTS, USER_ALREADY_EXISTS);
             }
             user = Entity.newBuilder(userKey)
-                    .set("username", newAccount.username)
+                    .set("username", newAccount.username) //TODO: RETIRAR ISTO, ACHO QUE NÃO É NECESSARIO
                     .set("password", DigestUtils.sha512Hex(newAccount.password))
                     .set("phone", newAccount.phone)
                     .set("address", newAccount.address)
@@ -175,6 +184,9 @@ public class OperationsResource {
     @POST
     @Path("/login")
     public Response login(AuthData data) {
+        if (!data.inputNotNull()) {
+            return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
+        }
         LOG.fine(LOG_MESSAGE_LOGIN_ATTEMPT + data.input.username);
         LoginData login = new LoginData(data.input.username, data.input.password);
         if (!login.notNullUsername()) {
@@ -220,6 +232,9 @@ public class OperationsResource {
     @POST
     @Path("/showusers")
     public Response showUsers(AuthData data) {
+        if (!data.tokenNotNull()) {
+            return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
         LOG.fine(LOG_MESSAGE_SHOWUSERS_ATTEMPT + data.token.username);
         if(!data.token.validTokenInput()) {
             return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
@@ -268,6 +283,9 @@ public class OperationsResource {
     @POST
     @Path("/deleteaccount")
     public Response deleteAccount(AuthData data) {
+        if (!data.inputAndTokenNotNull()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
         LOG.fine(LOG_MESSAGE_DELETE_ATTEMPT + data.token.username);
         if(!data.token.validTokenInput()) {
             return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
@@ -326,6 +344,9 @@ public class OperationsResource {
     @POST
     @Path("/modaccount")
     public Response modAccount(AuthData data) {
+        if (!data.inputAndTokenNotNull()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
         LOG.fine(LOG_MESSAGE_MOD_ATTEMPT + data.token.username);
         if(!data.token.validTokenInput()) {
             return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
@@ -379,7 +400,7 @@ public class OperationsResource {
             return successHandler(response);
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_MOD_ERROR + e.getMessage());
-            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error delete account.").build();
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error mod account.").build();
         }
     }
 
@@ -387,6 +408,9 @@ public class OperationsResource {
     @POST
     @Path("/showauthsessions")
     public Response showSessions(AuthData data) {
+        if (!data.tokenNotNull()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
         LOG.fine(LOG_MESSAGE_SHOW_SESSIONS_ATTEMPT + data.token.username);
         if(!data.token.validTokenInput()) {
             return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
@@ -436,7 +460,7 @@ public class OperationsResource {
             return successHandler(response);
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_SHOW_SESSIONS_ERROR + e.getMessage());
-            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error show users.").build();
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error show authenticated sessions.").build();
         }
     }
 
@@ -444,6 +468,9 @@ public class OperationsResource {
     @POST
     @Path("/showuserrole")
     public Response showRole(AuthData data) {
+        if (!data.inputAndTokenNotNull()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
         LOG.fine(LOG_MESSAGE_SHOW_ROLE_ATTEMPT + data.token.username);
         if(!data.token.validTokenInput()) {
             return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
@@ -486,6 +513,76 @@ public class OperationsResource {
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_SHOW_ROLE_ERROR + e.getMessage());
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error show user role.").build();
+        }
+    }
+
+    //Operation 8: Change User Role
+    @POST
+    @Path("/changeuserrole")
+    public Response changeRole(AuthData data) {
+        if (!data.inputAndTokenNotNull()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
+        LOG.fine(LOG_MESSAGE_CHANGE_ROLE_ATTEMPT + data.token.username);
+        if(!data.token.validTokenInput()) {
+            return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
+        if(!data.input.validUsername()) {
+            return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
+        }
+        if(!data.input.validRole()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key tokenKey = tokenKeyFactory.newKey(data.token.tokenId);
+            Entity token = txn.get(tokenKey);
+            if(!checkToken(txn, token, data.token)) {
+                LOG.warning(LOG_MESSAGE_CHANGE_ROLE_UNKNOWN_TOKEN + data.token.tokenId);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+            }
+            if(!checkTokenTime(token)) {
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.username);
+                txn.delete(tokenKey);
+                txn.commit();
+                return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
+            }
+            Key userKey = userKeyFactory.newKey(data.input.username);
+            Entity user = txn.get(userKey);
+            if (user == null) {
+                LOG.warning(LOG_MESSAGE_CHANGE_ROLE_UNKNOWN_USER + data.input.username);
+                txn.rollback();
+                return errorHandler(ERROR_USER_NOT_FOUND, USER_NOT_FOUND);
+            }
+            List<String> expectedRoles = List.of("ADMIN");
+            if(!checkRole(token, expectedRoles)) {
+                LOG.warning(LOG_MESSAGE_WRONG_ROLE + data.token.username);
+                txn.rollback();
+                return errorHandler(ERROR_UNAUTHORIZED, UNAUTHORIZED);
+            }
+
+            Entity.Builder builderUser = Entity.newBuilder(user);
+            builderUser.set("role", data.input.newRole.toUpperCase());
+            Query<Entity> tokenQuery = Query.newEntityQueryBuilder()
+                    .setKind("Token")
+                    .setFilter(PropertyFilter.eq("username", data.input.username))
+                    .build();
+            QueryResults<Entity> tokens = txn.run(tokenQuery);
+            while (tokens.hasNext()) {
+                Entity tkn = tokens.next();
+                Entity.Builder builderToken = Entity.newBuilder(tkn);
+                builderToken.set("role", data.input.newRole.toUpperCase());
+                txn.put(builderToken.build());
+            }
+            txn.put(builderUser.build());
+            txn.commit();
+            LOG.info(LOG_MESSAGE_CHANGE_ROLE_SUCCESSFUL + data.input.username);
+            MessageResponse response = new MessageResponse(MESSAGE_CHANGE_ROLE);
+            return successHandler(response);
+        } catch (Exception e) {
+            LOG.severe(LOG_MESSAGE_CHANGE_ROLE_ERROR + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error change role.").build();
         }
     }
 }

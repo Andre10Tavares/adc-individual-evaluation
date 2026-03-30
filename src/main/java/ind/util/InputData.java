@@ -67,9 +67,10 @@ public class InputData {
 
     //Used in Op 8
     public boolean validRole() {
-        return validUsername() &&
-                nonEmptyOrBlankField(newRole) &&
-                (newRole.equalsIgnoreCase("USER") || newRole.equalsIgnoreCase("BOFFICER") || newRole.equalsIgnoreCase("ADMIN"));
+        return nonEmptyOrBlankField(newRole) &&
+                (newRole.equalsIgnoreCase("USER") ||
+                        newRole.equalsIgnoreCase("BOFFICER") ||
+                        newRole.equalsIgnoreCase("ADMIN"));
     }
 
     //Used in Op 9

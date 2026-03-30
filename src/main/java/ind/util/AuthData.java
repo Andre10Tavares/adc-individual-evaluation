@@ -17,4 +17,17 @@ public class AuthData {
     public AuthData(AuthToken token) {
         this.token = token;
     }
+
+    public boolean inputNotNull() {
+        return input != null;
+    }
+
+    public boolean tokenNotNull() {
+        return token != null;
+    }
+
+    public boolean inputAndTokenNotNull() {
+        return inputNotNull() &&
+                tokenNotNull();
+    }
 }
