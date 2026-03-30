@@ -53,7 +53,7 @@ public class InputData {
     }
 
     //Only username in Ops 4, 7, 10.
-    //All the other validations use this one
+    //All the other validations use this one (exept validRole())
     public boolean validUsername() {
         return nonEmptyOrBlankField(username) &&
                 username.contains("@");

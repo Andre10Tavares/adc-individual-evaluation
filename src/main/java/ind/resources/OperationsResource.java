@@ -90,10 +90,16 @@ public class OperationsResource {
     private static final String LOG_MESSAGE_CHANGE_ROLE_UNKNOWN_USER = "Failed change role attempt for username: ";
     private static final String LOG_MESSAGE_CHANGE_ROLE_SUCCESSFUL = "Account with the role changed: ";
     private static final String LOG_MESSAGE_CHANGE_ROLE_ERROR = "Error change role: ";
+    private static final String LOG_MESSAGE_CHANGE_PASS_ATTEMPT =  "Change pass attempt by user: ";
+    private static final String LOG_MESSAGE_CHANGE_PASS_UNKNOWN_TOKEN = "Failed change pass attempt for token: ";
+    private static final String LOG_MESSAGE_CHANGE_PASS_UNKNOWN_USER = "Failed change pass attempt for username: ";
+    private static final String LOG_MESSAGE_CHANGE_PASS_SUCCESSFUL = "Password changed for: ";
+    private static final String LOG_MESSAGE_CHANGE_PASS_ERROR = "Error change role: ";
 
     private static final String MESSAGE_DELETE = "Account deleted successfully";
     private static final String MESSAGE_MOD = "Updated successfully";
     private static final String MESSAGE_CHANGE_ROLE = "Role updated successfully";
+    private static final String MESSAGE_CHANGE_PASS = "Password changed successfully";
 
     private static final Logger LOG = Logger.getLogger(OperationsResource.class.getName());
     private static final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
@@ -583,6 +589,65 @@ public class OperationsResource {
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_CHANGE_ROLE_ERROR + e.getMessage());
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error change role.").build();
+        }
+    }
+
+    //Operation 9: Change password
+    @POST
+    @Path("/changeuserpwd")
+    public Response changePass(AuthData data) {
+        if (!data.inputAndTokenNotNull()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
+        LOG.fine(LOG_MESSAGE_CHANGE_PASS_ATTEMPT + data.token.username);
+        if(!data.token.validTokenInput()) {
+            return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
+        if(!data.input.validPasswordInput()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key tokenKey = tokenKeyFactory.newKey(data.token.tokenId);
+            Entity token = txn.get(tokenKey);
+            if(!checkToken(txn, token, data.token)) {
+                LOG.warning(LOG_MESSAGE_CHANGE_PASS_UNKNOWN_TOKEN + data.token.tokenId);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+            }
+            if(!checkTokenTime(token)) {
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.username);
+                txn.delete(tokenKey);
+                txn.commit();
+                return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
+            }
+            Key userKey = userKeyFactory.newKey(data.input.username);
+            Entity user = txn.get(userKey);
+            if (user == null) {
+                LOG.warning(LOG_MESSAGE_CHANGE_PASS_UNKNOWN_USER + data.input.username);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_CREDENTIALS, INVALID_CREDENTIALS);
+            }
+            if(!user.getKey().getName().equals(data.token.username)){
+                LOG.warning(LOG_MESSAGE_CHANGE_PASS_UNKNOWN_USER + data.input.username);
+                txn.rollback();
+                return errorHandler(ERROR_UNAUTHORIZED, UNAUTHORIZED);
+            }
+            if(!user.getString("password").equals(DigestUtils.sha512Hex(data.input.oldPassword))) {
+                LOG.warning(LOG_MESSAGE_CHANGE_PASS_UNKNOWN_USER + data.input.username);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_CREDENTIALS, INVALID_CREDENTIALS);
+            }
+            Entity.Builder builder = Entity.newBuilder(user);
+            builder.set("password", DigestUtils.sha512Hex(data.input.newPassword));
+            txn.put(builder.build());
+            txn.commit();
+            LOG.info(LOG_MESSAGE_CHANGE_PASS_SUCCESSFUL + data.input.username);
+            MessageResponse response = new MessageResponse(MESSAGE_CHANGE_PASS);
+            return successHandler(response);
+        } catch (Exception e) {
+            LOG.severe(LOG_MESSAGE_CHANGE_PASS_ERROR + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error change password.").build();
         }
     }
 }
