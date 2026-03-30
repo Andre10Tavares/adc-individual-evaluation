@@ -95,11 +95,18 @@ public class OperationsResource {
     private static final String LOG_MESSAGE_CHANGE_PASS_UNKNOWN_USER = "Failed change pass attempt for username: ";
     private static final String LOG_MESSAGE_CHANGE_PASS_SUCCESSFUL = "Password changed for: ";
     private static final String LOG_MESSAGE_CHANGE_PASS_ERROR = "Error change role: ";
+    private static final String LOG_MESSAGE_LOGOUT_ATTEMPT = "Logout attempt by user: ";
+    private static final String LOG_MESSAGE_LOGOUT_ERROR = "Error logout account: ";
+    private static final String LOG_MESSAGE_LOGOUT_UNKNOWN_TOKEN = "Failed logout attempt for token: ";
+    private static final String LOG_MESSAGE_LOGOUT_UNKNOWN_USER = "Failed logout attempt for username: ";
+    private static final String LOG_MESSAGE_LOGOUT_NO_LOGINS = "Admin trying to logout this users with no logins at the moment: ";
+    private static final String LOG_MESSAGE_LOGOUT_SUCCESSFUL = "Account logout: ";
 
     private static final String MESSAGE_DELETE = "Account deleted successfully";
     private static final String MESSAGE_MOD = "Updated successfully";
     private static final String MESSAGE_CHANGE_ROLE = "Role updated successfully";
     private static final String MESSAGE_CHANGE_PASS = "Password changed successfully";
+    private static final String MESSAGE_LOGOUT = "Logout successful";
 
     private static final Logger LOG = Logger.getLogger(OperationsResource.class.getName());
     private static final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
@@ -169,7 +176,6 @@ public class OperationsResource {
                 return errorHandler(ERROR_USER_ALREADY_EXISTS, USER_ALREADY_EXISTS);
             }
             user = Entity.newBuilder(userKey)
-                    .set("username", newAccount.username) //TODO: RETIRAR ISTO, ACHO QUE NÃO É NECESSARIO
                     .set("password", DigestUtils.sha512Hex(newAccount.password))
                     .set("phone", newAccount.phone)
                     .set("address", newAccount.address)
@@ -648,6 +654,75 @@ public class OperationsResource {
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_CHANGE_PASS_ERROR + e.getMessage());
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error change password.").build();
+        }
+    }
+
+    //Operation 10: Logout
+    @POST
+    @Path("/logout")
+    public Response logout(AuthData data) {
+        if (!data.inputAndTokenNotNull()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
+        LOG.fine(LOG_MESSAGE_LOGOUT_ATTEMPT + data.token.username);
+        if(!data.token.validTokenInput()) {
+            return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
+        if(!data.input.validUsername()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key tokenKey = tokenKeyFactory.newKey(data.token.tokenId);
+            Entity token = txn.get(tokenKey);
+            if(!checkToken(txn, token, data.token)) {
+                LOG.warning(LOG_MESSAGE_LOGOUT_UNKNOWN_TOKEN + data.token.tokenId);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+            }
+            if(!checkTokenTime(token)) {
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.username);
+                txn.delete(tokenKey);
+                txn.commit();
+                return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
+            }
+            Key userKey = userKeyFactory.newKey(data.input.username);
+            Entity user = txn.get(userKey);
+            if (user == null) {
+                LOG.warning(LOG_MESSAGE_LOGOUT_UNKNOWN_USER + data.input.username);
+                txn.rollback();
+                return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+            }
+            List<String> expectedRoles = List.of("ADMIN");
+            if (!checkRole(token, expectedRoles) && !token.getString("username").equals(data.input.username)) {
+                LOG.warning(LOG_MESSAGE_WRONG_ROLE + data.token.username);
+                txn.rollback();
+                return errorHandler(ERROR_UNAUTHORIZED, UNAUTHORIZED);
+            }
+            if (checkRole(token, expectedRoles) && !token.getString("username").equals(data.input.username)) {
+                Query<Entity> tokenQuery = Query.newEntityQueryBuilder()
+                        .setKind("Token")
+                        .setFilter(PropertyFilter.eq("username", data.input.username))
+                        .build();
+                QueryResults<Entity> tokens = txn.run(tokenQuery);
+                if (!tokens.hasNext()) {
+                    LOG.warning(LOG_MESSAGE_LOGOUT_NO_LOGINS + data.input.username);
+                    txn.rollback();
+                    return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+                }
+                while (tokens.hasNext()) {
+                    txn.delete(tokens.next().getKey());
+                }
+            } else {
+                txn.delete(tokenKey);
+            }
+            txn.commit();
+            LOG.info(LOG_MESSAGE_LOGOUT_SUCCESSFUL + data.input.username);
+            MessageResponse response = new MessageResponse(MESSAGE_LOGOUT);
+            return successHandler(response);
+        } catch (Exception e) {
+            LOG.severe(LOG_MESSAGE_LOGOUT_ERROR + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error logout account.").build();
         }
     }
 }
