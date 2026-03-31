@@ -1,0 +1,22 @@
+{
+  "input": {
+    "username": "ola@gmail.com"
+  }
+}
+
+{
+  "token": {
+
+  }
+}
+
+{
+  "input": {
+    "username": "andre@gmail.com",
+    "oldPassword": "",
+    "newPassword": "pass"
+  },
+  "token": {
+
+  }
+}

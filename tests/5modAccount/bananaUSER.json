@@ -1,0 +1,12 @@
+{
+  "input": {
+    "username": "banana@gmail.com",
+    "attributes": {
+      "phone": "999",
+      "address": "banana town"
+    }
+  },
+  "token": {
+
+  }
+}

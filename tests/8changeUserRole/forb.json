@@ -1,0 +1,21 @@
+{
+  "input": {
+    "username": "ola@gmail.com"
+  }
+}
+
+{
+  "token": {
+
+  }
+}
+
+{
+  "input": {
+    "username": "diogo@gmail.com",
+    "newRole": "OLA"
+  },
+  "token": {
+
+  }
+}

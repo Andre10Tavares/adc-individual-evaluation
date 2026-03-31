@@ -1,0 +1,10 @@
+{
+  "input": {
+    "username": "vader@gmail.com",
+    "oldPassword": "pass",
+    "newPassword": "pass111"
+  },
+  "token": {
+
+  }
+}

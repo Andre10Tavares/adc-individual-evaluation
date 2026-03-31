@@ -1,0 +1,14 @@
+{
+  "input": {
+    "username": "ola@gmail.com",
+    "password": "pass123"
+  }
+}
+
+"token": {
+"tokenId": "588eba71-cb2e-47c9-9241-42c1f030e3b1",
+"username": "ola@gmail.com",
+"role": "BOFFICER",
+"issuedAt": 1774984127,
+"expiresAt": 1774985027
+}

@@ -1,0 +1,13 @@
+{
+  "input": {
+    "username": "andre@gmail.com",
+    "password": "pass"
+  }
+}
+
+{
+  "input": {
+    "username": "andre",
+    "password": "pass123"
+  }
+}

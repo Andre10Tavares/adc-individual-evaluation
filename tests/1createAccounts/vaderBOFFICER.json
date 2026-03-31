@@ -1,8 +1,8 @@
 {
   "input": {
-    "username": "pootis@gmail.com",
-    "password": "pass",
-    "confirmation": "pass",
+    "username": "vader@gmail.com",
+    "password": "pass123",
+    "confirmation": "pass123",
     "phone": "111111111",
     "address": "seixal",
     "role": "BOFFICER"

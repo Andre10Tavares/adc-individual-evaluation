@@ -1,8 +1,8 @@
 {
   "input": {
     "username": "banana@gmail.com",
-    "password": "pass",
-    "confirmation": "pass",
+    "password": "pass123",
+    "confirmation": "pass123",
     "phone": "111111111",
     "address": "seixal",
     "role": "USER"
