@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8">
+    <title>Login</title>
+</head>
+<body>
+<h1>Operation 2 - Login</h1>
+<p>Login on one account.</p>
+
+<p><b>Endpoint:</b> /login</p>
+<p><b>Complete:</b> https://individual-evaluation-491717.oa.r.appspot.com/rest/login</p>
+
+<p><b>JSON:</b></p>
+<pre>
+{
+  "input": {
+    "username": "string@gmail.com",
+    "password": "string"
+  }
+}
+</pre>
+<p>Gmail, just because it happened, it can be anything as long as it has an @ symbol, as if it were an email address.</p>
+<p>All tokens are valid for 15 minutes.</p>
+
+<p><b>Exemple JSON:</b></p>
+<pre>
+{
+  "input": {
+    "username": "banana@ups.com",
+    "password": "pass123"
+  }
+}
+</pre>
+
+<p><b>Authorized roles:</b></p>
+<p>USER</p>
+<p>BOFFICER</p>
+<p>ADMIN</p>
+
+<p><b>Possible Errors:</b></p>
+<p>Invalid credentials - Error 9900</p>
+<p>User not found - Error 9902</p>
+
+<p><a href="/index.html">Back</a></p>
+</body>
+</html>

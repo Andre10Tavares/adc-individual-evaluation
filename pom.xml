@@ -33,8 +33,6 @@
 
 
     <dependencies>
-        <!-- Compile/runtime dependencies -->
-
         <dependency>
             <groupId>com.google.cloud</groupId>
             <artifactId>google-cloud-storage</artifactId>
@@ -93,41 +91,9 @@
         <dependency>
             <groupId>jakarta.platform</groupId>
             <artifactId>jakarta.jakartaee-api</artifactId>
-            <version>10.0.0</version>  <!-- Use latest Jakarta EE version -->
+            <version>10.0.0</version>
             <scope>provided</scope>
         </dependency>
-        <!--
-                <dependency>
-                  <groupId>jakarta.servlet</groupId>
-                  <artifactId>jakarta.servlet-api</artifactId>
-                  <version>6.1.0</version>
-                  <type>jar</type>
-                  <scope>provided</scope>
-                </dependency>
-                <dependency>
-                    <groupId>jakarta.servlet.jsp</groupId>
-                    <artifactId>jakarta.servlet.jsp-api</artifactId>
-                    <version>4.0.0</version>
-                    <scope>provided</scope>
-                </dependency>
-
-                <dependency>
-                    <groupId>jakarta.ws.rs</groupId>
-                    <artifactId>jakarta.ws.rs-api</artifactId>
-                    <version>4.0.0</version>
-                </dependency>
-                <dependency>
-                    <groupId>jakarta.xml.bind</groupId>
-                    <artifactId>jakarta.xml.bind-api</artifactId>
-                    <version>4.0.2</version>
-                </dependency>
-                <dependency>
-                    <groupId>jakarta.annotation</groupId>
-                    <artifactId>jakarta.annotation-api</artifactId>
-                    <version>3.0.0</version>
-                </dependency>
-        -->
-
 
         <dependency>
             <groupId>com.auth0</groupId>
@@ -147,7 +113,6 @@
     </dependencies>
 
     <build>
-        <!-- To allow interaction with Gcloud client through maven-->
         <outputDirectory>${project.build.directory}/${project.build.finalName}/WEB-INF/classes</outputDirectory>
         <plugins>
             <plugin>

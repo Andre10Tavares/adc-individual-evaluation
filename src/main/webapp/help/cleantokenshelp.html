@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8">
+    <title>Clean Tokens</title>
+</head>
+<body>
+<h1>Operation 11 - Clean Tokens</h1>
+<p>Cleans expired tokens</p>
+
+<p><b>Endpoint:</b> /cleantokens</p>
+<p><b>Complete:</b> https://individual-evaluation-491717.oa.r.appspot.com/rest/cleantokens</p>
+
+<p><b>JSON:</b></p>
+<pre>
+{
+  "input": {},
+  "token": { ... }
+}
+</pre>
+<p>Token must be complete and valid.</p>
+<p>All tokens are valid for 15 minutes.</p>
+
+<p><b>Exemple JSON:</b></p>
+<pre>
+{
+  input": {},
+  "token": {
+    "tokenId": "abc",
+    "username": "banana@ups.com",
+    "role": "ADMIN",
+    "issuedAt": 0,
+    "expiresAt": 900
+  }
+}
+</pre>
+
+<p><b>Authorized roles:</b></p>
+<p>ADMIN</p>
+
+<p><b>Possible Errors:</b></p>
+<p>Invalid token - Error 9903</p>
+<p>Token expired - Error 9904</p>
+<p>Unauthorized - Error 9905</p>
+<p>Forbidden - Error 9907</p>
+
+<p><a href="/index.html">Back</a></p>
+</body>
+</html>

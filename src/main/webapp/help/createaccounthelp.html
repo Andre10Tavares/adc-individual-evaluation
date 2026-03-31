@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<head>
+    <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8">
+    <title>Create Account</title>
+</head>
+<body>
+<h1>Operation 1 - Create Account</h1>
+<p>Creates a new account.</p>
+
+<p><b>Endpoint:</b> /createaccount</p>
+<p><b>Complete:</b> https://individual-evaluation-491717.oa.r.appspot.com/rest/createaccount</p>
+
+<p><b>JSON:</b></p>
+<pre>
+{
+  "input": {
+    "username": "string@gmail.com",
+    "password": "string",
+    "confirmation": "string",
+    "phone": "string",
+    "address": "string",
+    "role": "USER | BOFFICER | ADMIN"
+  }
+}
+</pre>
+<p>Gmail, just because it happened, it can be anything as long as it has an @ symbol, as if it were an email address.</p>
+
+<p><b>Exemple JSON:</b></p>
+<pre>
+{
+  "input": {
+    "username": "banana@ups.com",
+    "password": "pass123",
+    "confirmation": "pass123",
+    "phone": "111",
+    "address": "lisboa",
+    "role": "ADMIN"
+  }
+}
+</pre>
+
+<p><b>Authorized roles:</b></p>
+<p>USER</p>
+<p>BOFFICER</p>
+<p>ADMIN</p>
+
+<p><b>Possible Errors:</b></p>
+<p>User already exists - Error 9901</p>
+<p>Invalid input - Error 9906</p>
+
+<p><a href="/index.html">Back</a></p>
+</body>
+</html>
