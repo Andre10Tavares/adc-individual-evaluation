@@ -1,5 +1,9 @@
 package ind.resources;
 
+import static ind.util.StringMessages.LogMessages.*;
+import static ind.util.StringMessages.ResponseMessages.*;
+import static ind.util.StringMessages.ErrorMessages.*;
+
 import java.util.List;
 import java.util.ArrayList;
 import java.util.logging.Logger;
@@ -34,79 +38,6 @@ import com.google.gson.Gson;
 @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
 @Consumes(MediaType.APPLICATION_JSON)
 public class OperationsResource {
-    private static final String INVALID_CREDENTIALS = "The username-password pair is not valid";
-    private static final String USER_ALREADY_EXISTS = "Error in creating an account because the username already exists";
-    private static final String USER_NOT_FOUND = "The username referred in the operation doesn’t exist in registered accounts";
-    private static final String INVALID_TOKEN = "The operation is called with an invalid token (wrong format for example)";
-    private static final String TOKEN_EXPIRED = "The operation is called with a token that is expired";
-    private static final String UNAUTHORIZED = "The operation is not allowed for the user role";
-    private static final String INVALID_INPUT = "The call is using input data not following the correct specification";
-    private static final String FORBIDDEN = "The operation generated a forbidden error by other reason";
-
-    private static final int ERROR_INVALID_CREDENTIALS = 9900;
-    private static final int ERROR_USER_ALREADY_EXISTS = 9901;
-    private static final int ERROR_USER_NOT_FOUND = 9902;
-    private static final int ERROR_INVALID_TOKEN = 9903;
-    private static final int ERROR_TOKEN_EXPIRED = 9904;
-    private static final int ERROR_UNAUTHORIZED = 9905;
-    private static final int ERROR_INVALID_INPUT = 9906;
-    private static final int ERROR_FORBIDDEN = 9907;
-
-    private static final String LOG_MESSAGE_REGISTER_ATTEMPT =  "Attempt to register user: ";
-    private static final String LOG_MESSAGE_REGISTER_SUCCESSFUL = "User registered: ";
-    private static final String LOG_MESSAGE_REGISTER_ERROR = "Error registering user: ";
-    private static final String LOG_MESSAGE_LOGIN_ATTEMPT = "Login attempt by user: ";
-    private static final String LOG_MESSAGE_LOGIN_UNKNOWN_USER = "Failed login attempt for username: ";
-    private static final String LOG_MESSAGE_LOGIN_ERROR = "Error login user: ";
-    private static final String LOG_MESSAGE_WRONG_PASSWORD = "Wrong password for: ";
-    private static final String LOG_MESSAGE_LOGIN_SUCCESSFUL = "Login successful by user: ";
-    private static final String LOG_MESSAGE_SHOWUSERS_ATTEMPT = "Show users attempt by user: ";
-    private static final String LOG_MESSAGE_SHOWUSERS_ERROR = "Error show users: ";
-    private static final String LOG_MESSAGE_SHOWUSERS_UNKNOWN_TOKEN = "Failed show users attempt for token: ";
-    private static final String LOG_MESSAGE_EXPIRED_TOKEN = "Expired token from: ";
-    private static final String LOG_MESSAGE_WRONG_ROLE = "User does not have the necessary role: ";
-    private static final String LOG_MESSAGE_SHOWUSERS_SUCCESSFUL = "Show users successful by user: ";
-    private static final String LOG_MESSAGE_DELETE_ATTEMPT = "Delete attempt by user: ";
-    private static final String LOG_MESSAGE_DELETE_ERROR = "Error delete account: ";
-    private static final String LOG_MESSAGE_DELETE_UNKNOWN_TOKEN = "Failed delete attempt for token: ";
-    private static final String LOG_MESSAGE_DELETE_UNKNOWN_USER = "Failed delete attempt for username: ";
-    private static final String LOG_MESSAGE_DELETE_SUCCESSFUL = "Account deleted: ";
-    private static final String LOG_MESSAGE_MOD_ATTEMPT =  "Modify one account attempt by user: ";
-    private static final String LOG_MESSAGE_MOD_UNKNOWN_TOKEN = "Failed mod attempt for token: ";
-    private static final String LOG_MESSAGE_MOD_UNKNOWN_USER = "Failed mod attempt for username: ";
-    private static final String LOG_MESSAGE_MOD_SUCCESSFUL = "Account modified: ";
-    private static final String LOG_MESSAGE_MOD_ERROR = "Error mod account: ";
-    private static final String LOG_MESSAGE_SHOW_SESSIONS_ATTEMPT = "Show sessions attempt by user: ";
-    private static final String LOG_MESSAGE_SHOW_SESSIONS_ERROR = "Error show sessions: ";
-    private static final String LOG_MESSAGE_SHOW_SESSIONS_UNKNOWN_TOKEN = "Failed show sessions attempt for token: ";
-    private static final String LOG_MESSAGE_SHOW_SESSIONS_SUCCESSFUL = "Show sessions successful by user: ";
-    private static final String LOG_MESSAGE_SHOW_ROLE_ATTEMPT = "Show role attempt by user: ";
-    private static final String LOG_MESSAGE_SHOW_ROLE_ERROR = "Error show role: ";
-    private static final String LOG_MESSAGE_SHOW_ROLE_UNKNOWN_TOKEN = "Failed show role attempt for token: ";
-    private static final String LOG_MESSAGE_SHOW_ROLE_UNKNOWN_USER = "Failed show role attempt for username: ";
-    private static final String LOG_MESSAGE_SHOW_ROLE_SUCCESSFUL = "Show role successful by user: ";
-    private static final String LOG_MESSAGE_CHANGE_ROLE_ATTEMPT =  "Change role on one account attempt by user: ";
-    private static final String LOG_MESSAGE_CHANGE_ROLE_UNKNOWN_TOKEN = "Failed change role attempt for token: ";
-    private static final String LOG_MESSAGE_CHANGE_ROLE_UNKNOWN_USER = "Failed change role attempt for username: ";
-    private static final String LOG_MESSAGE_CHANGE_ROLE_SUCCESSFUL = "Account with the role changed: ";
-    private static final String LOG_MESSAGE_CHANGE_ROLE_ERROR = "Error change role: ";
-    private static final String LOG_MESSAGE_CHANGE_PASS_ATTEMPT =  "Change pass attempt by user: ";
-    private static final String LOG_MESSAGE_CHANGE_PASS_UNKNOWN_TOKEN = "Failed change pass attempt for token: ";
-    private static final String LOG_MESSAGE_CHANGE_PASS_UNKNOWN_USER = "Failed change pass attempt for username: ";
-    private static final String LOG_MESSAGE_CHANGE_PASS_SUCCESSFUL = "Password changed for: ";
-    private static final String LOG_MESSAGE_CHANGE_PASS_ERROR = "Error change role: ";
-    private static final String LOG_MESSAGE_LOGOUT_ATTEMPT = "Logout attempt by user: ";
-    private static final String LOG_MESSAGE_LOGOUT_ERROR = "Error logout account: ";
-    private static final String LOG_MESSAGE_LOGOUT_UNKNOWN_TOKEN = "Failed logout attempt for token: ";
-    private static final String LOG_MESSAGE_LOGOUT_UNKNOWN_USER = "Failed logout attempt for username: ";
-    private static final String LOG_MESSAGE_LOGOUT_NO_LOGINS = "Admin trying to logout this users with no logins at the moment: ";
-    private static final String LOG_MESSAGE_LOGOUT_SUCCESSFUL = "Account logout: ";
-
-    private static final String MESSAGE_DELETE = "Account deleted successfully";
-    private static final String MESSAGE_MOD = "Updated successfully";
-    private static final String MESSAGE_CHANGE_ROLE = "Role updated successfully";
-    private static final String MESSAGE_CHANGE_PASS = "Password changed successfully";
-    private static final String MESSAGE_LOGOUT = "Logout successful";
 
     private static final Logger LOG = Logger.getLogger(OperationsResource.class.getName());
     private static final Datastore datastore = DatastoreOptions.getDefaultInstance().getService();
@@ -462,8 +393,6 @@ public class OperationsResource {
                             tkn.getString("username"),
                             tkn.getString("role"),
                             tkn.getLong("expiresAt")));
-                } else {
-                    txn.delete(tkn.getKey());
                 }
             }
             SessionsResponse response = new SessionsResponse(sessions);
@@ -723,6 +652,62 @@ public class OperationsResource {
         } catch (Exception e) {
             LOG.severe(LOG_MESSAGE_LOGOUT_ERROR + e.getMessage());
             return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error logout account.").build();
+        }
+    }
+
+    //Operation 11: Clean Expired Tokens
+    @POST
+    @Path("/cleantokens")
+    public Response cleanTokens(AuthData data) {
+        if (!data.tokenNotNull()) {
+            return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+        }
+        LOG.fine(LOG_MESSAGE_CLEAN_TOKENS_ATTEMPT + data.token.username);
+        if(!data.token.validTokenInput()) {
+            return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+        }
+        try {
+            Transaction txn = datastore.newTransaction();
+            Key tokenKey = tokenKeyFactory.newKey(data.token.tokenId);
+            Entity token = txn.get(tokenKey);
+            if(!checkToken(txn, token, data.token)) {
+                LOG.warning(LOG_MESSAGE_CLEAN_TOKENS_UNKNOWN_TOKEN + data.token.tokenId);
+                txn.rollback();
+                return errorHandler(ERROR_INVALID_TOKEN, INVALID_TOKEN);
+            }
+            if(!checkTokenTime(token)) {
+                LOG.warning(LOG_MESSAGE_EXPIRED_TOKEN + data.token.username);
+                txn.delete(tokenKey);
+                txn.commit();
+                return errorHandler(ERROR_TOKEN_EXPIRED, TOKEN_EXPIRED);
+            }
+            List<String> expectedRoles = List.of("ADMIN");
+            if(!checkRole(token, expectedRoles)) {
+                LOG.warning(LOG_MESSAGE_WRONG_ROLE + data.token.username);
+                txn.rollback();
+                return errorHandler(ERROR_UNAUTHORIZED, UNAUTHORIZED);
+            }
+            long time = System.currentTimeMillis() / 1000;
+            Query<Entity> query = Query.newEntityQueryBuilder()
+                    .setKind("Token")
+                    .setFilter(PropertyFilter.lt("expiresAt", time))
+                    .build();
+            QueryResults<Entity> tokens = txn.run(query);
+            if (!tokens.hasNext()) {
+                LOG.warning(LOG_MESSAGE_CLEAN_TOKENS_NO_TOKENS);
+                txn.rollback();
+                return errorHandler(ERROR_FORBIDDEN, FORBIDDEN);
+            }
+            while (tokens.hasNext()) {
+                txn.delete(tokens.next().getKey());
+            }
+            MessageResponse response = new MessageResponse(MESSAGE_CLEAN_TOKENS);
+            txn.commit();
+            LOG.info(LOG_MESSAGE_CLEAN_TOKENS_SUCCESSFUL + data.token.username);
+            return successHandler(response);
+        } catch (Exception e) {
+            LOG.severe(LOG_MESSAGE_CLEAN_TOKENS_ERROR + e.getMessage());
+            return Response.status(Status.INTERNAL_SERVER_ERROR).entity("Error clean tokens.").build();
         }
     }
 }
