@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
-<head>
-    <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8">
-    <title>Modify Account Attributes</title>
-</head>
-<body>
-<h1>Operation 5 - Modify Account Attributes</h1>
-<p>Modify phone or address of one account</p>
+    <head>
+        <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8">
+        <title>Modify Account Attributes</title>
+    </head>
+    <body>
+        <h1>Operation 5 - Modify Account Attributes</h1>
+        <p>Modify phone or address of one account</p>
 
-<p><b>Endpoint:</b> /modaccount</p>
-<p><b>Complete:</b> https://individual-evaluation-491717.oa.r.appspot.com/rest/modaccount</p>
+        <p><b>Endpoint:</b> /modaccount</p>
+        <p><b>Complete:</b> https://individual-evaluation-491717.oa.r.appspot.com/rest/modaccount</p>
 
-<p><b>JSON:</b></p>
-<pre>
+        <p><b>JSON:</b></p>
+        <pre>
 {
   "input": {
     "username": "string@gmail.com",
@@ -23,13 +23,13 @@
   },
   "token": { ... }
 }
-</pre>
-<p>Gmail, just because it happened, it can be anything as long as it has an @ symbol, as if it were an email address.</p>
-<p>Token must be complete and valid.</p>
-<p>All tokens are valid for 15 minutes.</p>
+        </pre>
+        <p>Gmail, just because it happened, it can be anything as long as it has an @ symbol, as if it were an email address.</p>
+        <p>Token must be complete and valid.</p>
+        <p>All tokens are valid for 15 minutes.</p>
 
-<p><b>Exemple JSON:</b></p>
-<pre>
+        <p><b>Exemple JSON:</b></p>
+        <pre>
 {
   input": {
     "username": "banana@ups.com",
@@ -46,21 +46,21 @@
     "expiresAt": 900
   }
 }
-</pre>
+        </pre>
 
-<p><b>Authorized roles:</b></p>
-<p>USER</p>
-<p>BOFFICER (can modify attributes of USER)</p>
-<p>ADMIN (can modify attributes of any role)</p>
+        <p><b>Authorized roles:</b></p>
+        <p>USER</p>
+        <p>BOFFICER (also can modify attributes of USER)</p>
+        <p>ADMIN (can modify attributes of any role)</p>
 
-<p><b>Possible Errors:</b></p>
-<p>User not found - Error 9902</p>
-<p>Invalid token - Error 9903</p>
-<p>Token expired - Error 9904</p>
-<p>Unauthorized - Error 9905</p>
-<p>Invalid input - Error 9906</p>
-<p>Forbidden - Error 9907</p>
+        <p><b>Possible Errors:</b></p>
+        <p>User not found - Error 9902</p>
+        <p>Invalid token - Error 9903</p>
+        <p>Token expired - Error 9904</p>
+        <p>Unauthorized - Error 9905</p>
+        <p>Invalid input - Error 9906</p>
+        <p>Forbidden - Error 9907</p>
 
-<p><a href="/index.html">Back</a></p>
-</body>
+        <p><a href="/index.html">Back</a></p>
+    </body>
 </html>

@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
-<head>
-    <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8">
-    <title>Change User Role</title>
-</head>
-<body>
-<h1>Operation 8 - Change User Role</h1>
-<p>Change role of one user</p>
+    <head>
+        <meta http-equiv="content-type" content="application/xhtml+xml; charset=UTF-8">
+        <title>Change User Role</title>
+    </head>
+    <body>
+        <h1>Operation 8 - Change User Role</h1>
+        <p>Change role of one user</p>
 
-<p><b>Endpoint:</b> /changeuserrole</p>
-<p><b>Complete:</b> https://individual-evaluation-491717.oa.r.appspot.com/rest/changeuserrole</p>
+        <p><b>Endpoint:</b> /changeuserrole</p>
+        <p><b>Complete:</b> https://individual-evaluation-491717.oa.r.appspot.com/rest/changeuserrole</p>
 
-<p><b>JSON:</b></p>
-<pre>
+        <p><b>JSON:</b></p>
+        <pre>
 {
   "input": {
     "username": "string@gmail.com",
@@ -20,13 +20,13 @@
   },
   "token": { ... }
 }
-</pre>
-<p>Gmail, just because it happened, it can be anything as long as it has an @ symbol, as if it were an email address.</p>
-<p>Token must be complete and valid.</p>
-<p>All tokens are valid for 15 minutes.</p>
+        </pre>
+        <p>Gmail, just because it happened, it can be anything as long as it has an @ symbol, as if it were an email address.</p>
+        <p>Token must be complete and valid.</p>
+        <p>All tokens are valid for 15 minutes.</p>
 
-<p><b>Exemple JSON:</b></p>
-<pre>
+        <p><b>Exemple JSON:</b></p>
+        <pre>
 {
   input": {
     "username": "vader@ups.com",
@@ -40,18 +40,18 @@
     "expiresAt": 900
   }
 }
-</pre>
+        </pre>
 
-<p><b>Authorized roles:</b></p>
-<p>ADMIN</p>
+        <p><b>Authorized roles:</b></p>
+        <p>ADMIN</p>
 
-<p><b>Possible Errors:</b></p>
-<p>User not found - Error 9902</p>
-<p>Invalid token - Error 9903</p>
-<p>Token expired - Error 9904</p>
-<p>Unauthorized - Error 9905</p>
-<p>Forbidden - Error 9907</p>
+        <p><b>Possible Errors:</b></p>
+        <p>User not found - Error 9902</p>
+        <p>Invalid token - Error 9903</p>
+        <p>Token expired - Error 9904</p>
+        <p>Unauthorized - Error 9905</p>
+        <p>Forbidden - Error 9907</p>
 
-<p><a href="/index.html">Back</a></p>
-</body>
+        <p><a href="/index.html">Back</a></p>
+    </body>
 </html>
